@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
-use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
-use ApiPlatform\Metadata\ApiFilter;
+use ApiPlatform\Doctrine\Orm\Filter\PartialSearchFilter;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\QueryParameter;
 use App\Repository\BookRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -17,8 +17,13 @@ use Doctrine\ORM\Mapping as ORM;
  * Ein Buch im Bestand der Bibliothek.
  */
 #[ORM\Entity(repositoryClass: BookRepository::class)]
-#[ApiResource(operations: [new GetCollection()])]
-#[ApiFilter(SearchFilter::class, properties: ['author' => 'partial'])]
+#[ApiResource(operations: [
+    new GetCollection(
+        parameters: [
+            'author' => new QueryParameter(filter: new PartialSearchFilter()),
+        ],
+    ),
+])]
 class Book
 {
     #[ORM\Id]

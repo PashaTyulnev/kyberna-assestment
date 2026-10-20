@@ -5,7 +5,24 @@
 Container starten:
 
 ```bash
-docker compose up -d
+docker compose up -d --build
+```
+
+Beim Start des `php`-Containers (`docker/php/entrypoint.sh`) passiert automatisch:
+
+1. `composer install`, falls `vendor/` fehlt
+2. warten, bis die Datenbank erreichbar ist
+3. alle Migrationen ausführen
+4. **nur bei leerer Datenbank** (keine Bücher vorhanden) Testdaten anlegen (`app:create-dummy-data`): 50 Bücher, 50 Mitglieder, 30 Ausleihen und die Erinnerungen für die überfälligen davon
+
+Danach ist die App direkt mit Daten unter http://localhost:8080/api erreichbar. Neustarts legen keine weiteren Testdaten an.
+
+`--build` ist nötig, wenn sich `docker/php/entrypoint.sh` oder das Dockerfile geändert haben, weil beide ins Image kopiert werden.
+
+Komplett neu aufsetzen (**löscht alle Daten** der lokalen Datenbank):
+
+```bash
+docker compose down -v && docker compose up -d --build
 ```
 
 In den PHP-Container wechseln (Bash-Shell im Projektverzeichnis `/var/www/html`):
@@ -30,12 +47,19 @@ bin/console doctrine:migrations:migrate    # Migrationen ausführen
 
 ## Dummy-Daten
 
+Ein Command legt zusammenhängende Testdaten an: Bücher, Mitglieder, Ausleihen und die Erinnerungen für die überfälligen Ausleihen.
+
 ```bash
-bin/console app:create-dummy-Books        # 50 Bücher
-bin/console app:create-dummy-Books 200    # beliebige Anzahl
-bin/console app:create-dummy-members      # 50 Mitglieder
-bin/console app:create-dummy-members 200  # beliebige Anzahl
+bin/console app:create-dummy-data                                    # 50 Bücher, 50 Mitglieder, 30 Ausleihen
+bin/console app:create-dummy-data --books=200 --members=100 --loans=80
 ```
+
+- die Ausleihen liegen in den letzten 30 Tagen, ein Teil ist also überfällig (Leihfrist 2 Wochen)
+- rund 30 % sind bereits zurückgegeben
+- offene Ausleihen reduzieren `availableCopies`, Bücher ohne verfügbare Kopien werden dafür nicht verwendet
+- für die überfälligen Ausleihen werden Erinnerungen angelegt (wie bei `app:overdue-loans-reminder`)
+
+Die Daten kommen zu vorhandenen dazu. Beim Docker-Start läuft der Command automatisch, aber nur bei leerer Datenbank.
 
 ## Ausleihen (`POST /api/loans`)
 
@@ -69,6 +93,46 @@ Kein Request-Body nötig:
 
 ```bash
 curl -X POST http://localhost:8080/api/loans/1/return
+```
+
+## Erinnerungen für überfällige Ausleihen
+
+Der Command `app:overdue-loans-reminder` (`App\Command\OverdueLoansReminderCommand` → `ReminderService::syncOverdueReminders()`) gleicht die Tabelle `reminders` mit den überfälligen Ausleihen ab. Eine echte E-Mail wird nicht verschickt.
+
+- **überfällig** = nicht zurückgegeben (`returnedAt` ist `null`) und `dueAt` liegt in der Vergangenheit
+- für jede überfällige Ausleihe gibt es danach genau eine Erinnerung mit dem heutigen Datum (`date`, `overdue_loan_id`)
+- entfernt werden Erinnerungen, deren Ausleihe nicht mehr überfällig ist (z. B. zurückgegeben), und Erinnerungen von früheren Tagen
+- mehrfaches Ausführen am selben Tag ändert nichts
+
+Manuell ausführen:
+
+```bash
+docker compose exec php bin/console app:overdue-loans-reminder   # vom Host
+bin/console app:overdue-loans-reminder                           # im Container (make sh)
+```
+
+### Täglicher Cronjob
+
+Auf dem Host die Crontab öffnen:
+
+```bash
+crontab -e
+```
+
+Und folgende Zeile eintragen (täglich um 06:00 Uhr). Den Pfad auf das Projektverzeichnis anpassen; die Container müssen laufen (`docker compose up -d`):
+
+```cron
+0 6 * * * cd /pfad/zum/projekt && docker compose exec -T php bin/console app:overdue-loans-reminder >> var/log/overdue-reminders.log 2>&1
+```
+
+- `-T` ist nötig, weil cron kein Terminal hat
+- die Ausgabe landet in `var/log/overdue-reminders.log`
+- ohne Docker (PHP direkt auf dem Server): `0 6 * * * cd /pfad/zum/projekt && php bin/console app:overdue-loans-reminder --env=prod >> var/log/overdue-reminders.log 2>&1`
+
+Prüfen, ob der Eintrag gespeichert ist:
+
+```bash
+crontab -l
 ```
 
 ## Tests

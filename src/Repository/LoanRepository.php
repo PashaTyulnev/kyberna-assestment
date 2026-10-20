@@ -25,28 +25,21 @@ class LoanRepository extends ServiceEntityRepository
         parent::__construct($registry, Loan::class);
     }
 
-    //    /**
-    //     * @return Loan[] Returns an array of Loan objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('l')
-    //            ->andWhere('l.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('l.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
-
-    //    public function findOneBySomeField($value): ?Loan
-    //    {
-    //        return $this->createQueryBuilder('l')
-    //            ->andWhere('l.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+    /**
+     * Findet alle Ausleihen, die nicht zurückgegeben sind und deren Fälligkeitsdatum vor dem Stichtag liegt.
+     *
+     * @param \DateTimeImmutable $now Stichtag
+     *
+     * @return list<Loan>
+     */
+    public function findOverdue(\DateTimeImmutable $now): array
+    {
+        return $this->createQueryBuilder('l')
+            ->andWhere('l.returnedAt IS NULL')
+            ->andWhere('l.dueAt < :now')
+            ->setParameter('now', $now)
+            ->orderBy('l.dueAt', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 }
