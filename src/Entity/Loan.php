@@ -9,6 +9,7 @@ use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use ApiPlatform\OpenApi\Model\Response as OpenApiResponse;
+use App\Dto\CreateLoanRequest;
 use App\Repository\LoanRepository;
 use App\State\LoanProcessor;
 use App\State\ReturnLoanProcessor;
@@ -21,7 +22,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ApiResource(
     operations: [
         new GetCollection(),
-        new Post(processor: LoanProcessor::class),
+        new Post(input: CreateLoanRequest::class, processor: LoanProcessor::class),
         new Post(
             uriTemplate: '/loans/{id}/return',
             status: 200,

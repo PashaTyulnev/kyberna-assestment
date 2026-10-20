@@ -34,7 +34,7 @@ bin/console doctrine:migrations:migrate                                # Migrati
 ```bash
 curl 'http://localhost:8080/api/books?author=weber'
 curl -X POST http://localhost:8080/api/loans -H 'Content-Type: application/ld+json' \
-  -d '{"book": "/api/books/1", "member": "/api/members/1"}'
+  -d '{"book_id": 1, "member_id": 1}'
 curl -X POST http://localhost:8080/api/loans/1/return
 ```
 
