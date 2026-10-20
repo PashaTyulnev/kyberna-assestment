@@ -3,13 +3,29 @@
 namespace App\Entity;
 
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Delete;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Patch;
+use ApiPlatform\Metadata\Post;
 use App\Repository\LoanRepository;
+use App\State\LoanProcessor;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: LoanRepository::class)]
-#[ApiResource]
+#[ApiResource(
+    operations: [
+        new Get(),
+        new GetCollection(),
+        new Post(processor: LoanProcessor::class),
+        new Patch(),
+        new Delete(),
+    ],
+)]
 class Loan
 {
+    public const string LOAN_PERIOD = 'P2W';
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]

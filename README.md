@@ -37,6 +37,24 @@ bin/console app:create-dummy-members      # 50 Mitglieder
 bin/console app:create-dummy-members 200  # beliebige Anzahl
 ```
 
+## Ausleihen (`POST /api/loans`)
+
+Beim Anlegen einer Ausleihe greift der `App\State\LoanProcessor` und setzt folgende Werte automatisch (vom Client gesendete Werte werden überschrieben):
+
+| Feld         | Wert                                                      |
+|--------------|-----------------------------------------------------------|
+| `loanedAt`   | aktueller Zeitpunkt                                       |
+| `dueAt`      | `loanedAt` + `Loan::LOAN_PERIOD` (`P2W`, also 2 Wochen)   |
+| `returnedAt` | `null`                                                    |
+
+Der Client muss daher nur `book` und `member` mitschicken:
+
+```bash
+curl -X POST http://localhost:8080/api/loans \
+  -H 'Content-Type: application/ld+json' \
+  -d '{"book": "/api/books/1", "member": "/api/members/1"}'
+```
+
 ## Tests
 
 Im Container (`make sh`), laufen gegen die normale Datenbank `app`:
