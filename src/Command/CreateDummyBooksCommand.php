@@ -9,7 +9,7 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-#[AsCommand(name: 'app:create-dummy-Books', description: 'Erstellt Dummy-Bücher in der Datenbank')]
+#[AsCommand(name: 'app:create-dummy-books', description: 'Erstellt Dummy-Bücher in der Datenbank')]
 class CreateDummyBooksCommand
 {
     private const BATCH_SIZE = 100;

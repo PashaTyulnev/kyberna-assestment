@@ -36,3 +36,16 @@ bin/console app:create-dummy-Books 200    # beliebige Anzahl
 bin/console app:create-dummy-members      # 50 Mitglieder
 bin/console app:create-dummy-members 200  # beliebige Anzahl
 ```
+
+## Tests
+
+Im Container (`make sh`), laufen gegen die normale Datenbank `app`:
+
+```bash
+php bin/phpunit                                   # alle Tests
+php bin/phpunit tests/Api                         # Verzeichnis
+php bin/phpunit tests/Api/BookApiTest.php         # einzelne Datei
+php bin/phpunit --filter BookApiTest              # Klasse
+php bin/phpunit --filter testGetCollectionReturnsArray # Methode
+php bin/phpunit --filter 'BookApiTest::testGetCollectionReturnsArray'
+```
