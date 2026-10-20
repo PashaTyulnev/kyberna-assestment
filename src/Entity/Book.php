@@ -1,15 +1,24 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Entity;
 
+use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
+use ApiPlatform\Metadata\ApiFilter;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\GetCollection;
 use App\Repository\BookRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
+/**
+ * Ein Buch im Bestand der Bibliothek.
+ */
 #[ORM\Entity(repositoryClass: BookRepository::class)]
-#[ApiResource]
+#[ApiResource(operations: [new GetCollection()])]
+#[ApiFilter(SearchFilter::class, properties: ['author' => 'partial'])]
 class Book
 {
     #[ORM\Id]
@@ -35,21 +44,41 @@ class Book
     #[ORM\OneToMany(targetEntity: Loan::class, mappedBy: 'book')]
     private Collection $loans;
 
+    /**
+     * Initialisiert die Collection der Ausleihen.
+     */
     public function __construct()
     {
         $this->loans = new ArrayCollection();
     }
 
+    /**
+     * Gibt die ID zurück.
+     *
+     * @return ?int
+     */
     public function getId(): ?int
     {
         return $this->id;
     }
 
+    /**
+     * Gibt den Titel zurück.
+     *
+     * @return ?string
+     */
     public function getTitle(): ?string
     {
         return $this->title;
     }
 
+    /**
+     * Setzt den Titel.
+     *
+     * @param string $title
+     *
+     * @return static
+     */
     public function setTitle(string $title): static
     {
         $this->title = $title;
@@ -57,11 +86,23 @@ class Book
         return $this;
     }
 
+    /**
+     * Gibt den Autor zurück.
+     *
+     * @return ?string
+     */
     public function getAuthor(): ?string
     {
         return $this->author;
     }
 
+    /**
+     * Setzt den Autor.
+     *
+     * @param string $author
+     *
+     * @return static
+     */
     public function setAuthor(string $author): static
     {
         $this->author = $author;
@@ -69,11 +110,23 @@ class Book
         return $this;
     }
 
+    /**
+     * Gibt die ISBN zurück.
+     *
+     * @return ?string
+     */
     public function getIsbn(): ?string
     {
         return $this->isbn;
     }
 
+    /**
+     * Setzt die ISBN.
+     *
+     * @param string $isbn
+     *
+     * @return static
+     */
     public function setIsbn(string $isbn): static
     {
         $this->isbn = $isbn;
@@ -81,11 +134,23 @@ class Book
         return $this;
     }
 
+    /**
+     * Gibt die Anzahl verfügbarer Kopien zurück.
+     *
+     * @return ?int
+     */
     public function getAvailableCopies(): ?int
     {
         return $this->availableCopies;
     }
 
+    /**
+     * Setzt die Anzahl verfügbarer Kopien.
+     *
+     * @param int $availableCopies
+     *
+     * @return static
+     */
     public function setAvailableCopies(int $availableCopies): static
     {
         $this->availableCopies = $availableCopies;
@@ -94,6 +159,8 @@ class Book
     }
 
     /**
+     * Gibt die Ausleihen zurück.
+     *
      * @return Collection<int, Loan>
      */
     public function getLoans(): Collection
@@ -101,6 +168,13 @@ class Book
         return $this->loans;
     }
 
+    /**
+     * Fügt eine Ausleihe hinzu und setzt die Gegenseite der Beziehung.
+     *
+     * @param Loan $loan
+     *
+     * @return static
+     */
     public function addLoan(Loan $loan): static
     {
         if (!$this->loans->contains($loan)) {
@@ -111,6 +185,13 @@ class Book
         return $this;
     }
 
+    /**
+     * Entfernt eine Ausleihe und löst die Gegenseite der Beziehung.
+     *
+     * @param Loan $loan
+     *
+     * @return static
+     */
     public function removeLoan(Loan $loan): static
     {
         if ($this->loans->removeElement($loan)) {

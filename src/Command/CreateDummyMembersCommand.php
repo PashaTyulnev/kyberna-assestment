@@ -1,11 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Command;
 
 use App\Entity\Member;
-use DateMalformedStringException;
-use DateTimeImmutable;
-use DateTimeZone;
 use Doctrine\ORM\EntityManagerInterface;
 use Random\RandomException;
 use Symfony\Component\Console\Attribute\Argument;
@@ -13,6 +12,9 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
+/**
+ * Erstellt zufällige Dummy-Mitglieder für Entwicklung und Tests.
+ */
 #[AsCommand(name: 'app:create-dummy-members', description: 'Erstellt Dummy-Mitglieder in der Datenbank')]
 class CreateDummyMembersCommand
 {
@@ -21,13 +23,23 @@ class CreateDummyMembersCommand
     private const array FIRST_NAMES = ['Anna', 'Lukas', 'Marie', 'Felix', 'Sophie', 'Jonas', 'Lena', 'Paul'];
     private const array LAST_NAMES = ['Müller', 'Schmidt', 'Weber', 'Fischer', 'Wagner', 'Becker', 'Hoffmann', 'Koch'];
 
+    /**
+     * @param EntityManagerInterface $entityManager zum Speichern der Mitglieder
+     */
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
     ) {
     }
 
     /**
-     * @throws DateMalformedStringException
+     * Legt die gewünschte Anzahl Mitglieder in Batches an.
+     *
+     * @param SymfonyStyle $io    Konsolenausgabe
+     * @param int          $count Anzahl der zu erstellenden Mitglieder
+     *
+     * @return int Exit-Code des Commands
+     *
+     * @throws \DateMalformedStringException
      * @throws RandomException
      */
     public function __invoke(
@@ -40,7 +52,7 @@ class CreateDummyMembersCommand
             return Command::INVALID;
         }
 
-        $utc = new DateTimeZone('UTC');
+        $utc = new \DateTimeZone('UTC');
 
         for ($i = 1; $i <= $count; ++$i) {
             $firstName = self::pick(self::FIRST_NAMES);
@@ -49,7 +61,7 @@ class CreateDummyMembersCommand
             $member = new Member()
                 ->setName(sprintf('%s %s', $firstName, $lastName))
                 ->setEmail(self::email($firstName, $lastName))
-                ->setMembershipDate(new DateTimeImmutable(sprintf('-%d days', random_int(0, 3 * 365)), $utc));
+                ->setMembershipDate(new \DateTimeImmutable(sprintf('-%d days', random_int(0, 3 * 365)), $utc));
 
             $this->entityManager->persist($member);
 

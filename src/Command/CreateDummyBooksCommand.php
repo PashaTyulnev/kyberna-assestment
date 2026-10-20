@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Command;
 
 use App\Entity\Book;
@@ -9,21 +11,37 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
+/**
+ * Erstellt zufällige Dummy-Bücher für Entwicklung und Tests.
+ */
 #[AsCommand(name: 'app:create-dummy-books', description: 'Erstellt Dummy-Bücher in der Datenbank')]
 class CreateDummyBooksCommand
 {
-    private const BATCH_SIZE = 100;
+    private const int BATCH_SIZE = 100;
 
-    private const ADJECTIVES = ['Verlorene', 'Dunkle', 'Stille', 'Letzte', 'Goldene', 'Vergessene', 'Ewige', 'Geheime'];
-    private const NOUNS = ['Stadt', 'Reise', 'Insel', 'Nacht', 'Erinnerung', 'Grenze', 'Wahrheit', 'Spur'];
-    private const FIRST_NAMES = ['Anna', 'Lukas', 'Marie', 'Felix', 'Sophie', 'Jonas', 'Lena', 'Paul'];
-    private const LAST_NAMES = ['Müller', 'Schmidt', 'Weber', 'Fischer', 'Wagner', 'Becker', 'Hoffmann', 'Koch'];
+    private const array ADJECTIVES = ['Verlorene', 'Dunkle', 'Stille', 'Letzte', 'Goldene', 'Vergessene', 'Ewige', 'Geheime'];
+    private const array NOUNS = ['Stadt', 'Reise', 'Insel', 'Nacht', 'Erinnerung', 'Grenze', 'Wahrheit', 'Spur'];
+    private const array FIRST_NAMES = ['Anna', 'Lukas', 'Marie', 'Felix', 'Sophie', 'Jonas', 'Lena', 'Paul'];
+    private const array LAST_NAMES = ['Müller', 'Schmidt', 'Weber', 'Fischer', 'Wagner', 'Becker', 'Hoffmann', 'Koch'];
 
+    /**
+     * @param EntityManagerInterface $entityManager zum Speichern der Bücher
+     */
     public function __construct(
         private EntityManagerInterface $entityManager,
     ) {
     }
 
+    /**
+     * Legt die gewünschte Anzahl Bücher in Batches an.
+     *
+     * @param SymfonyStyle $io    Konsolenausgabe
+     * @param int          $count Anzahl der zu erstellenden Bücher
+     *
+     * @return int Exit-Code des Commands
+     *
+     * @throws \Random\RandomException
+     */
     public function __invoke(
         SymfonyStyle $io,
         #[Argument(description: 'Anzahl der zu erstellenden Bücher')] int $count = 50,
