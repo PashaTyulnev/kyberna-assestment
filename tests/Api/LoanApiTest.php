@@ -8,9 +8,12 @@ use App\Entity\Member;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\Clock\Test\ClockSensitiveTrait;
 
 class LoanApiTest extends WebTestCase
 {
+    use ClockSensitiveTrait;
+
     private KernelBrowser $client;
     private EntityManagerInterface $em;
 
@@ -61,9 +64,29 @@ class LoanApiTest extends WebTestCase
         $book = $this->em->find(Book::class, $book->getId());
         self::assertSame(1, $book->getAvailableCopies());
         self::assertCount(1, $book->getLoans());
+    }
 
-        $loan = $book->getLoans()->first();
-        self::assertEqualsWithDelta(new \DateTimeImmutable(), $loan->getLoanedAt(), 5);
+    public function testPostLoanSetsDefaultDates(): void
+    {
+        self::mockTime('2026-01-15 10:00:00');
+
+        $book = $this->createBook(availableCopies: 1);
+        $member = $this->createMember();
+
+        // vom Client gesendete Werte müssen überschrieben werden
+        $this->postLoan($book, $member, [
+            'loanedAt' => '2000-01-01T00:00:00+00:00',
+            'dueAt' => '2000-01-02T00:00:00+00:00',
+            'returnedAt' => '2000-01-03T00:00:00+00:00',
+        ]);
+
+        self::assertResponseStatusCodeSame(201);
+
+        $this->em->clear();
+        $loan = $this->em->getRepository(Loan::class)->findOneBy(['book' => $book->getId()]);
+        self::assertNotNull($loan);
+        self::assertSame('2026-01-15 10:00:00', $loan->getLoanedAt()->format('Y-m-d H:i:s'));
+        self::assertSame('2026-01-29 10:00:00', $loan->getDueAt()->format('Y-m-d H:i:s'));
         self::assertEquals($loan->getLoanedAt()->add(new \DateInterval(Loan::LOAN_PERIOD)), $loan->getDueAt());
         self::assertNull($loan->getReturnedAt());
     }
@@ -83,7 +106,10 @@ class LoanApiTest extends WebTestCase
         self::assertCount(0, $book->getLoans());
     }
 
-    private function postLoan(Book $book, Member $member): void
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function postLoan(Book $book, Member $member, array $extra = []): void
     {
         $this->client->request(
             'POST',
@@ -95,6 +121,7 @@ class LoanApiTest extends WebTestCase
             content: json_encode([
                 'book' => '/api/books/'.$book->getId(),
                 'member' => '/api/members/'.$member->getId(),
+                ...$extra,
             ]),
         );
     }
