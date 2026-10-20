@@ -5,51 +5,58 @@ declare(strict_types=1);
 namespace App\Tests\Command;
 
 use App\Command\OverdueLoansReminderCommand;
-use App\Entity\Loan;
-use App\Entity\Reminder;
-use App\Repository\LoanRepository;
-use App\Repository\ReminderRepository;
-use App\Service\ReminderService;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Message\SyncOverdueReminders;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\Messenger\Envelope;
+use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Messenger\Stamp\HandledStamp;
 
 /**
- * Unit-Test für den OverdueLoansReminderCommand, ohne Datenbank (Repositories und EntityManager gemockt).
+ * Unit-Test für den OverdueLoansReminderCommand, ohne Datenbank (MessageBus gemockt).
  */
 class OverdueLoansReminderCommandTest extends TestCase
 {
     /**
-     * Der Command gleicht die Erinnerungen ab und gibt die Anzahl angelegter und entfernter Erinnerungen aus.
+     * Der Command verschickt SyncOverdueReminders und gibt das Ergebnis des Handlers aus.
      *
      * @return void
      */
-    public function testReportsCreatedAndRemovedReminders(): void
+    public function testDispatchesMessageAndReportsResult(): void
     {
-        $loanRepository = $this->createStub(LoanRepository::class);
-        $loanRepository->method('findOverdue')->willReturn([new Loan(), new Loan()]);
-
-        $outdated = (new Reminder())->setOverdueLoan(new Loan())->setDate(new \DateTimeImmutable('2026-03-09'));
-        $reminderRepository = $this->createStub(ReminderRepository::class);
-        $reminderRepository->method('findAll')->willReturn([$outdated]);
-
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->expects(self::exactly(2))->method('persist');
-        $entityManager->expects(self::once())->method('remove')->with($outdated);
-        $entityManager->expects(self::once())->method('flush');
-
-        $command = new OverdueLoansReminderCommand(
-            new ReminderService($loanRepository, $reminderRepository, $entityManager, new MockClock('2026-03-10 08:00:00')),
-        );
+        $messageBus = $this->createMock(MessageBusInterface::class);
+        $messageBus->expects(self::once())
+            ->method('dispatch')
+            ->with(self::isInstanceOf(SyncOverdueReminders::class))
+            ->willReturnCallback(static fn (object $message): Envelope => new Envelope(
+                $message,
+                [new HandledStamp(['created' => 2, 'removed' => 1], 'handler')],
+            ));
 
         $output = new BufferedOutput();
-        $exitCode = $command(new SymfonyStyle(new ArrayInput([]), $output));
+        $exitCode = (new OverdueLoansReminderCommand($messageBus))(new SymfonyStyle(new ArrayInput([]), $output));
 
         self::assertSame(Command::SUCCESS, $exitCode);
         self::assertStringContainsString('2 Erinnerung(en) erstellt, 1 veraltete entfernt.', $output->fetch());
+    }
+
+    /**
+     * Wird die Message asynchron verarbeitet (kein HandledStamp), meldet der Command nur das Anstoßen.
+     *
+     * @return void
+     */
+    public function testReportsDispatchWhenHandledAsynchronously(): void
+    {
+        $messageBus = $this->createStub(MessageBusInterface::class);
+        $messageBus->method('dispatch')->willReturnCallback(static fn (object $message): Envelope => new Envelope($message));
+
+        $output = new BufferedOutput();
+        $exitCode = (new OverdueLoansReminderCommand($messageBus))(new SymfonyStyle(new ArrayInput([]), $output));
+
+        self::assertSame(Command::SUCCESS, $exitCode);
+        self::assertStringContainsString('Abgleich der Erinnerungen angestoßen.', $output->fetch());
     }
 }

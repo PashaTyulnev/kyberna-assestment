@@ -64,7 +64,7 @@ final class ReminderService
 
         foreach ($overdueLoans as $loan) {
             $this->entityManager->persist(
-                (new Reminder())
+                new Reminder()
                     ->setDate($today)
                     ->setOverdueLoan($loan)
             );

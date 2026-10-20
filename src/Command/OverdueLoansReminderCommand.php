@@ -4,27 +4,29 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use App\Service\ReminderService;
+use App\Message\SyncOverdueReminders;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Messenger\Stamp\HandledStamp;
 
 /**
- * Erstellt Erinnerungen für überfällige Ausleihen und entfernt veraltete. Gedacht für den täglichen Cronjob.
+ * Stößt den Abgleich der Erinnerungen für überfällige Ausleihen über Messenger an. Gedacht für den täglichen Cronjob.
  */
 #[AsCommand(name: 'app:overdue-loans-reminder', description: 'Erstellt Erinnerungen für überfällige Ausleihen und entfernt veraltete')]
 class OverdueLoansReminderCommand
 {
     /**
-     * @param ReminderService $reminderService gleicht die Erinnerungen ab
+     * @param MessageBusInterface $messageBus verschickt die Message SyncOverdueReminders
      */
     public function __construct(
-        private ReminderService $reminderService,
+        private MessageBusInterface $messageBus,
     ) {
     }
 
     /**
-     * Gleicht die Tabelle reminders mit den aktuell überfälligen Ausleihen ab.
+     * Verschickt SyncOverdueReminders und gibt das Ergebnis des Handlers aus.
      *
      * @param SymfonyStyle $io Konsolenausgabe
      *
@@ -32,7 +34,17 @@ class OverdueLoansReminderCommand
      */
     public function __invoke(SymfonyStyle $io): int
     {
-        $result = $this->reminderService->syncOverdueReminders();
+        $envelope = $this->messageBus->dispatch(new SyncOverdueReminders());
+
+        /** @var array{created: int, removed: int}|null $result */
+        $result = $envelope->last(HandledStamp::class)?->getResult();
+
+        if (null === $result) {
+            // Message wurde an einen asynchronen Transport übergeben
+            $io->success('Abgleich der Erinnerungen angestoßen.');
+
+            return Command::SUCCESS;
+        }
 
         $io->success(sprintf(
             '%d Erinnerung(en) erstellt, %d veraltete entfernt.',
