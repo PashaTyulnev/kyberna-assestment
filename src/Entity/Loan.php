@@ -17,7 +17,7 @@ class Loan
 
     #[ORM\ManyToOne(inversedBy: 'loans')]
     #[ORM\JoinColumn(nullable: false)]
-    private ?book $book = null;
+    private ?Book $book = null;
 
     #[ORM\ManyToOne(inversedBy: 'loans')]
     #[ORM\JoinColumn(nullable: false)]
@@ -37,12 +37,12 @@ class Loan
         return $this->id;
     }
 
-    public function getBook(): ?book
+    public function getBook(): ?Book
     {
         return $this->book;
     }
 
-    public function setBook(?book $book): static
+    public function setBook(?Book $book): static
     {
         $this->book = $book;
 

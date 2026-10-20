@@ -32,7 +32,7 @@ class Book
     /**
      * @var Collection<int, Loan>
      */
-    #[ORM\OneToMany(targetEntity: Loan::class, mappedBy: 'book')]
+    #[ORM\OneToMany(targetEntity: Loan::class, mappedBy: 'Book')]
     private Collection $loans;
 
     public function __construct()
