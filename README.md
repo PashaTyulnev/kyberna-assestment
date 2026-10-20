@@ -1,5 +1,7 @@
 # kyberna-assestment
 
+**API-Dokumentation (Swagger UI):** http://localhost:8080/api#/ (Container müssen laufen)
+
 Ausführliche Dokumentation im Ordner [`docs/`](docs/):
 [Setup](docs/setup.md) · [API](docs/api.md) · [Dummy-Daten](docs/dummy-data.md) · [Erinnerungen & Cronjob](docs/reminders.md) · [Tests](docs/testing.md) · [Code-Style](docs/code-style.md)
 
